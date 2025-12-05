@@ -1,7 +1,8 @@
 import streamlit as st
-st.set_page_config(page_title="Datos Personales", layout="centered")
+import re
+from datetime import date
 
-# Las classes para manejar los datos del usuario
+st.set_page_config(page_title="Datos Personales", layout="centered")
 
 class Usuario_datos:
     def __init__(self, nombre, apellido, edad, genero, altura, peso, objetivo, nivel):
@@ -37,8 +38,7 @@ class Gestor_Usuario:
             nivel=nivel
         )
 
-# La parte de verificaciñon para todos los datos.
-
+# Verificación para todos los datos.
     def verif_nombre(self, nombre_completo):
         partes = nombre_completo.strip().split()
         if len(partes) == 0:
@@ -51,11 +51,8 @@ class Gestor_Usuario:
         return max(12, min(edad, 80))
 
     def verif_genero(self, genero):
-        genero = genero.lower()
-        if genero in ["male", "masculino"]:
-            return "Male"
-        if genero in ["female", "femenino"]:
-            return "Female"
+        if genero in ["Male", "Female"]:
+            return genero
         return "Other"
 
     def verif_altura(self, altura):
@@ -108,58 +105,111 @@ st.markdown("Fill in your personal details to join our community.")
 gestor = Gestor_Usuario()
 
 with st.form("perfil_gym_form", clear_on_submit=False):
+
     st.header("New Registration")
     col1, col2 = st.columns(2)
 
     with col1:
-        nombre_completo = st.text_input("Full name (mandatory)", max_chars=80)
-        fecha_nac = st.date_input("Birth date (mandatory)")
-        genero = st.selectbox("Gender (mandatory)", ["Male","Female"])
+        nombre_completo = st.text_input("Full name", max_chars=80)
+        genero = st.selectbox("Gender", ["Select your gender","Male", "Female"])
+
+        actual_date = date.today()
+        long_date = date(actual_date.year - 80, actual_date.month, actual_date.day)
+        fecha_nac = st.date_input(
+            "Birth date (required)",
+            min_value=long_date,
+            max_value=actual_date,
+            value=actual_date
+        )
 
     with col2:
-        edad = st.number_input("Age (mandatory)", min_value=12, max_value=80, value=16)
-        altura_cm = st.number_input("height (cm)", min_value=100, max_value=270, value=170)
-        peso_kg = st.number_input("weight (kg)", min_value=30.0, max_value=300.0, value=70.0, format="%.1f")
+        edad = st.number_input("Age", min_value=0, max_value=80, step=1)
+        altura_cm = st.number_input("height (cm)", min_value=0, max_value=270, step=5)
+        peso_kg = st.number_input("weight (kg)", min_value=0.0, max_value=300.0, format="%.1f", step=5.0)
 
     st.header("Physical information and objectives")
     objetivo = st.selectbox("Objetive", [
+        "Select an objective",
         "Gain muscle/weight",
         "lose weight"
     ])
     experiencia = st.selectbox("Gym experience", [
-        "Beginner (0-6 meses)",
-        "Intermediate (6-12 meses)",
-        "Expert (>12 meses)"
+        "Select your gym experience",
+        "Beginner (0-6 months)",
+        "Intermediate (6-12 months)",
+        "Expert (>12 months)"
     ])
 
-    enviar = st.form_submit_button("Enviar")
-
+    enviar = st.form_submit_button("Send")
 
 if enviar:
-    usuario = gestor.get_usuario(
-        nombre_completo,
-        edad,
-        genero,
-        altura_cm,
-        peso_kg,
-        objetivo,
-        experiencia
-    )
+    errores = [] 
 
-    st.success("Data sent successfully!")
+    if nombre_completo.strip() == "":
+        errores.append("The name is mandatory.")
+    elif not re.match(r"^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+$", nombre_completo):
+        errores.append("The name can only contain letters and spaces (including accents).")
 
-    st.json({
-        "Nombre": usuario.Nombre,
-        "Apellido": usuario.Apellido,
-        "Edad": usuario.Edad,
-        "Genero": usuario.Genero,
-        "Altura": usuario.Altura,
-        "Peso": usuario.Peso,
-        "Objetivo": usuario.Objetivo,
-        "Nivel": usuario.Nivel
-    })
+    if genero.strip() == "Select your gender":
+        errores.append("You must select a gender.")
+
+    if fecha_nac is None:
+        errores.append("You must select a birth date.")
+    else:
+        hoy = date.today()
+        edad_calc = hoy.year - fecha_nac.year - ((hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day))
+
+    if objetivo.strip() == "Select an objective":
+        errores.append("You must select an objective.")
+    if experiencia.strip() == "Select your gym experience":
+        errores.append("You must select your gym experience.")
+
+    if not (14 <= edad <= 80):
+        errores.append("Age must be between 12 and 80.")
+    if not (100 <= altura_cm <= 270):
+        errores.append("Height must be between 100 and 270 cm.")
+    if not (30.0 <= peso_kg <= 300.0):
+        errores.append("Weight must be between 30 and 300 kg.")
+
+    if fecha_nac is not None:
+        if not (edad == edad_calc or edad == edad_calc + 1):
+            errores.append(
+                f"Entered age does not match with your birth date. Based on birth you have {edad_calc}-{edad_calc + 1} years old, "
+                f"but your entered age is {edad} ."
+                "Please correct either the birth date or the age."
+            )
+
+    if errores:
+        st.error("Please correct the following errors before continuing:")
+        for e in errores:
+            st.write("❌ " + e)
+    else:
+        usuario = gestor.get_usuario(
+            nombre_completo,
+            edad,
+            genero,
+            altura_cm,
+            peso_kg,
+            objetivo,
+            experiencia
+        )
+
+        st.success("Data sent successfully!")
+
+        st.json({
+            "Nombre": usuario.Nombre,
+            "Apellido": usuario.Apellido,
+            "Edad": usuario.Edad,
+            "Genero": usuario.Genero,
+            "Altura": usuario.Altura,
+            "Peso": usuario.Peso,
+            "Objetivo": usuario.Objetivo,
+            "Nivel": usuario.Nivel
+        })
 
 st.info("Fill out the form to join our community!!!")
+
+
 
 
 
