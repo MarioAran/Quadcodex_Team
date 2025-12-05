@@ -2,7 +2,7 @@ import streamlit as st
 import re
 from datetime import date
 
-st.set_page_config(page_title="Datos Personales", layout="centered")
+st.set_page_config(page_title="AlgoFit", layout="centered")
 
 class Usuario_datos:
     def __init__(self, nombre, apellido, edad, genero, altura, peso, objetivo, nivel):
@@ -106,7 +106,7 @@ gestor = Gestor_Usuario()
 
 with st.form("perfil_gym_form", clear_on_submit=False):
 
-    st.header("New Registration")
+    st.header("Personal Data")
     col1, col2 = st.columns(2)
 
     with col1:
@@ -124,8 +124,8 @@ with st.form("perfil_gym_form", clear_on_submit=False):
 
     with col2:
         edad = st.number_input("Age", min_value=0, max_value=80, step=1)
-        altura_cm = st.number_input("height (cm)", min_value=0, max_value=270, step=5)
-        peso_kg = st.number_input("weight (kg)", min_value=0.0, max_value=300.0, format="%.1f", step=5.0)
+        altura_cm = st.number_input("Height (cm)", min_value=0, max_value=270, step=5)
+        peso_kg = st.number_input("Weight (kg)", min_value=0.0, max_value=300.0, format="%.1f", step=5.0)
 
     st.header("Physical information and objectives")
     objetivo = st.selectbox("Objetive", [
